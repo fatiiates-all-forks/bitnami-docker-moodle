@@ -171,6 +171,9 @@ EOF
         # Change wwwroot configuration so the Moodle site can be accessible from anywhere
         moodle_configure_wwwroot
 
+        # Turn on Moodle's reverseproxy (also sslproxy if using ssl) so we can use the reverse proxy
+        moodle_configure_reverseproxy
+
         info "Persisting Moodle installation"
         persist_app "$app_name" "$MOODLE_DATA_TO_PERSIST"
     else
@@ -335,7 +338,7 @@ moodle_configure_wwwroot() {
     # Sanitize the hostname including quotes
     local host="${MOODLE_HOST:+"'${MOODLE_HOST}'"}"
     # Default value if the hostname isn't provided
-    host="${MOODLE_HOST:-"\$_SERVER['HTTP_HOST']"}"
+    host="${host:-"\$_SERVER['HTTP_HOST']"}"
 
     # sed replacement notes:
     # - The ampersand ('&') is escaped due to sed replacing any non-escaped ampersand characters with the matched string
@@ -349,4 +352,26 @@ if (isset(\$_SERVER['HTTPS']) \&\& \$_SERVER['HTTPS'] == 'on') {\\
   \$CFG->wwwroot   = 'http://' . ${host};\\
 }"
     replace_in_file "$MOODLE_CONF_FILE" "\\\$CFG->wwwroot\s*=.*" "$conf_to_replace"
+}
+
+moodle_configure_reverseproxy() {
+
+    # Checking the reverseproxy setting values
+    if ! is_empty_value "$MOODLE_REVERSEPROXY"; then
+        if [[ "$MOODLE_REVERSEPROXY" == "true" ]]; then
+            echo "\$CFG->reverseproxy = true;" >> "$MOODLE_CONF_FILE"
+        elif [[ "$MOODLE_REVERSEPROXY" != "false" ]]; then
+            warn "The allowed values for MOODLE_REVERSEPROXY are: true or false"
+        fi
+    fi
+
+    # Checking the sslproxy setting values
+    if ! is_empty_value "$MOODLE_SSLPROXY"; then
+        if [[ "$MOODLE_SSLPROXY" == "true" ]]; then
+            echo "\$CFG->sslproxy = true;" >> "$MOODLE_CONF_FILE"
+        elif [[ "$MOODLE_SSLPROXY" != "false" ]]; then
+            warn "The allowed values for MOODLE_SSLPROXY are: true or false"
+        fi
+    fi
+
 }
