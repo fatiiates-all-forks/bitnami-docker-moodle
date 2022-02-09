@@ -51,6 +51,11 @@ moodle_validate() {
             print_validation_error "An invalid port was specified in the environment variable ${port_var}: ${err}."
         fi
     }
+    check_yes_no_value() {
+        if ! is_yes_no_value "${!1}" && ! is_true_false_value "${!1}"; then
+            print_validation_error "The allowed values for ${1} are: yes no"
+        fi
+    }
 
     # Validate credentials
     if is_boolean_yes "$ALLOW_EMPTY_PASSWORD"; then
@@ -80,6 +85,10 @@ moodle_validate() {
 
     # Check that the web server is properly set up
     web_server_validate || print_validation_error "Web server validation failed"
+
+    # Check support for reverseproxy and sslproxy feature
+    check_yes_no_value "MOODLE_REVERSEPROXY"
+    check_yes_no_value "MOODLE_SSLPROXY"
 
     return "$error_code"
 }
@@ -357,21 +366,9 @@ if (isset(\$_SERVER['HTTPS']) \&\& \$_SERVER['HTTPS'] == 'on') {\\
 moodle_configure_reverseproxy() {
 
     # Checking the reverseproxy setting values
-    if ! is_empty_value "$MOODLE_REVERSEPROXY"; then
-        if [[ "$MOODLE_REVERSEPROXY" == "true" ]]; then
-            echo "\$CFG->reverseproxy = true;" >> "$MOODLE_CONF_FILE"
-        elif [[ "$MOODLE_REVERSEPROXY" != "false" ]]; then
-            warn "The allowed values for MOODLE_REVERSEPROXY are: true or false"
-        fi
-    fi
-
+    is_boolean_yes "$MOODLE_REVERSEPROXY" && echo "\$CFG->reverseproxy = true;" >> "$MOODLE_CONF_FILE"
     # Checking the sslproxy setting values
-    if ! is_empty_value "$MOODLE_SSLPROXY"; then
-        if [[ "$MOODLE_SSLPROXY" == "true" ]]; then
-            echo "\$CFG->sslproxy = true;" >> "$MOODLE_CONF_FILE"
-        elif [[ "$MOODLE_SSLPROXY" != "false" ]]; then
-            warn "The allowed values for MOODLE_SSLPROXY are: true or false"
-        fi
-    fi
+    is_boolean_yes "$MOODLE_SSLPROXY" && echo "\$CFG->sslproxy = true;" >> "$MOODLE_CONF_FILE"
 
+    true
 }
